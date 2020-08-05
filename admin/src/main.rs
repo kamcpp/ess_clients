@@ -118,7 +118,7 @@ fn main() {
                 ),
         )
         .subcommand(
-            App::new("lists")
+            App::new("list")
                 .about("Lists an entity. Supported entities: [ employee ]")
                 .setting(AppSettings::SubcommandRequiredElseHelp)
                 .subcommand(
@@ -133,5 +133,36 @@ fn main() {
                 ),
         )
         .get_matches();
-    println!("Hello, world!");
+
+    match matches.subcommand() {
+        ("add", Some(add_matches)) => {
+            match add_matches.subcommand() {
+                ("employee", add_employee_matches) => {
+                },
+                _ => panic!(),
+            }
+        },
+        ("update", Some(update_matches)) => {
+            match update_matches.subcommand() {
+                ("employee", update_employee_matches) => {
+                },
+                _ => panic!(),
+            }
+        },
+        ("delete", Some(delete_matches)) => {
+            match delete_matches.subcommand() {
+                ("employee", delete_employee_matches) => {
+                },
+                _ => panic!(),
+            }
+        },
+        ("list", Some(list_matches)) => {
+            match list_matches.subcommand() {
+                ("employee", list_employee_matches) => {
+                },
+                _ => panic!(),
+            }
+        },
+        _ => panic!(),
+    }
 }
