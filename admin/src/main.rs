@@ -22,15 +22,15 @@ extern crate serde_derive;
 pub struct Employee {
     pub id: Option<i32>,
     #[serde(rename = "employeeNr")]
-    pub employee_nr: String,
+    pub employee_nr: Option<String>,
     #[serde(rename = "firstName")]
-    pub first_name: String,
+    pub first_name: Option<String>,
     #[serde(rename = "secondName")]
-    pub second_name: String,
-    pub username: String,
+    pub second_name: Option<String>,
+    pub username: Option<String>,
     #[serde(rename = "officeEmail")]
-    pub office_email: String,
-    pub mobile: String,
+    pub office_email: Option<String>,
+    pub mobile: Option<String>,
 }
 
 fn create_client(identity_file_path: &str) -> Client<TimeoutConnector<HttpsConnector<HttpConnector>>> {
@@ -135,32 +135,32 @@ fn main() -> Result<(), Error> {
                         Arg::with_name("nr")
                             .long("nr")
                             .help("Employee's number")
-                            .required(true)
+                            .required(false)
                             .takes_value(true),
                         Arg::with_name("first-name")
                             .long("first-name")
                             .help("Employee's first name")
-                            .required(true)
+                            .required(false)
                             .takes_value(true),
                         Arg::with_name("second-name")
                             .long("second-name")
                             .help("Employee's second name")
-                            .required(true)
+                            .required(false)
                             .takes_value(true),
                         Arg::with_name("username")
                             .long("username")
                             .help("Employee's username")
-                            .required(true)
+                            .required(false)
                             .takes_value(true),
                         Arg::with_name("email")
                             .long("email")
                             .help("Employee's email")
-                            .required(true)
+                            .required(false)
                             .takes_value(true),
                         Arg::with_name("mobile")
                             .long("mobile")
                             .help("Employee's mobile")
-                            .required(true)
+                            .required(false)
                             .takes_value(true),
                     ]),
                 ),
@@ -205,70 +205,118 @@ fn main() -> Result<(), Error> {
         let simurgh_addr = matches.value_of("simurgh-addr").unwrap();
         let client = create_client(matches.value_of("pkcs12-cert").unwrap());
 
+        let req;
+        let mut response_has_entites = false;
         match matches.subcommand() {
             ("add", Some(matches)) => {
                 match matches.subcommand() {
                     ("employee", Some(matches)) => {
                         let employee = Employee {
                             id: None,
-                            employee_nr: matches.value_of("nr").unwrap().to_string(),
-                            first_name: matches.value_of("first-name").unwrap().to_string(),
-                            second_name: matches.value_of("second-name").unwrap().to_string(),
-                            username: matches.value_of("username").unwrap().to_string(),
-                            office_email: matches.value_of("email").unwrap().to_string(),
-                            mobile: matches.value_of("mobile").unwrap().to_string(),
+                            employee_nr: matches.value_of("nr").map(|s| s.to_string()),
+                            first_name: matches.value_of("first-name").map(|s| s.to_string()),
+                            second_name: matches.value_of("second-name").map(|s| s.to_string()),
+                            username: matches.value_of("username").map(|s| s.to_string()),
+                            office_email: matches.value_of("email").map(|s| s.to_string()),
+                            mobile: matches.value_of("mobile").map(|s| s.to_string()),
                         };
-                        let req = Request::post(format!("https://{}/api/admin/employee", simurgh_addr))
+                        req = Request::post(format!("https://{}/api/admin/employee", simurgh_addr))
                                     .header("Content-Type", "application/json")
                                     .body(Body::from(serde_json::to_string(&employee).unwrap())).unwrap();
-                        match client.request(req).await {
-                            Ok(resp) => {
-                                let status = resp.status();
-                                if resp.status() != StatusCode::OK {
-                                    match hyper::body::to_bytes(resp).await {
-                                        Ok(bytes) => {
-                                            match std::str::from_utf8(bytes.as_ref()) {
-                                                Ok(body_str) => {
-                                                    println!("ERROR: [{}] {}", status, body_str);
-                                                },
-                                                Err(err) => println!("ERROR: Error while converting body to utf8 string: {:?}", err),
-                                            }
-                                        },
-                                        Err(err) => println!("ERROR: Error while reading body: {:?}", err),
-                                    }
-                                }
-                            },
-                            Err(err) => {
-                                println!("ERROR: {}", err);
-                            }
-                        }
-
                     },
                     (entity, _) => panic!("ERROR: Entity is not supported for 'add': {}", entity),
                 }
             },
             ("update", Some(matches)) => {
                 match matches.subcommand() {
-                    ("employee", Some(_matches)) => {
+                    ("employee", Some(matches)) => match matches.value_of("id").unwrap().parse::<i32>() {
+                        Ok(id) => {
+                            let employee = Employee {
+                                id: Some(id),
+                                employee_nr: matches.value_of("nr").map(|s| s.to_string()),
+                                first_name: matches.value_of("first-name").map(|s| s.to_string()),
+                                second_name: matches.value_of("second-name").map(|s| s.to_string()),
+                                username: matches.value_of("username").map(|s| s.to_string()),
+                                office_email: matches.value_of("email").map(|s| s.to_string()),
+                                mobile: matches.value_of("mobile").map(|s| s.to_string()),
+                            };
+                            req = Request::put(format!("https://{}/api/admin/employee/{}", simurgh_addr, id))
+                                        .header("Content-Type", "application/json")
+                                        .body(Body::from(serde_json::to_string(&employee).unwrap())).unwrap();
+                        },
+                        Err(_) => panic!("ERROR: The value provided for 'id' is not an integer!"),
                     },
                     (entity, _) => panic!("ERROR: Entity is not supported for 'update': {}", entity),
                 }
             },
             ("delete", Some(matches)) => {
                 match matches.subcommand() {
-                    ("employee", Some(_matches)) => {
+                    ("employee", Some(matches)) => match matches.value_of("id").unwrap().parse::<i32>() {
+                        Ok(id) => {
+                            req = Request::delete(format!("https://{}/api/admin/employee/{}", simurgh_addr, id))
+                                        .body(Body::from("")).unwrap();
+                        },
+                        Err(_) => panic!("ERROR: The value provided for 'id' is not an integer!"),
                     },
                     (entity, _) => panic!("ERROR: Entity is not supported for 'delete': {}", entity),
                 }
             },
             ("list", Some(matches)) => {
                 match matches.subcommand() {
-                    ("employee", Some(_matches)) => {
+                    ("employee", Some(matches)) => {
+                        let mut uri = format!("https://{}/api/admin/employee", simurgh_addr);
+                        uri = match matches.value_of("id") {
+                            Some(id) => format!("{}/{}", uri, id),
+                            None => format!("{}/all", uri),
+                        };
+                        response_has_entites = true;
+                        req = Request::get(uri).body(Body::from("")).unwrap();
                     },
                     (entity, _) => panic!("ERROR: Entity is not supported for 'list': {}", entity),
                 }
             },
             (subcommand, _)  => panic!("ERROR: Subcommand is not supported: {}", subcommand),
+        }
+        match client.request(req).await {
+            Ok(resp) => {
+                let status = resp.status();
+                if resp.status() == StatusCode::OK {
+                    if response_has_entites {
+                        match hyper::body::to_bytes(resp).await {
+                            Ok(bytes) => {
+                                match std::str::from_utf8(bytes.as_ref()) {
+                                    Ok(body_str) => {
+                                        let employees: Result<Vec<Employee>, _> = serde_json::from_str(body_str);
+                                        match employees {
+                                            Ok(employees) => {
+                                                employees.iter().for_each(|employee| println!("{:#?}", employee));
+                                            },
+                                            Err(err) => panic!("ERROR: Error while deserializing the response: {}", err),
+                                        }
+                                    },
+                                    Err(err) => println!("ERROR: Error while converting body to utf8 string: {:?}", err),
+                                }
+                            },
+                            Err(err) => println!("ERROR: Error while reading body: {:?}", err),
+                        }
+                    }
+                } else {
+                    match hyper::body::to_bytes(resp).await {
+                        Ok(bytes) => {
+                            match std::str::from_utf8(bytes.as_ref()) {
+                                Ok(body_str) => {
+                                    println!("ERROR: [{}] {}", status, body_str);
+                                },
+                                Err(err) => println!("ERROR: Error while converting body to utf8 string: {:?}", err),
+                            }
+                        },
+                        Err(err) => println!("ERROR: Error while reading body: {:?}", err),
+                    }
+                }
+            },
+            Err(err) => {
+                println!("ERROR: {}", err);
+            }
         }
     });
     Ok(())
