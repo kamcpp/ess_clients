@@ -289,7 +289,7 @@ fn main() -> Result<(), Error> {
                                         let employees: Result<Vec<Employee>, _> = serde_json::from_str(body_str);
                                         match employees {
                                             Ok(employees) => {
-                                                employees.iter().for_each(|employee| println!("{:#?}", employee));
+                                                employees.iter().for_each(|employee| println!("{:?}", employee));
                                             },
                                             Err(err) => panic!("ERROR: Error while deserializing the response: {}", err),
                                         }

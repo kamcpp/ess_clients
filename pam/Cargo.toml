@@ -1,7 +1,10 @@
 [package]
-name = "pam"
+name = "simurgh-pam"
 version = "0.1.0"
 authors = ["Kamran Amini <kam.cpp@gmail.com>"]
 edition = "2018"
+
+[lib]
+crate-type=["rlib", "cdylib"]
 
 [dependencies]
