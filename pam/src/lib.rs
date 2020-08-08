@@ -57,7 +57,7 @@ pub extern "C" fn new_identity_verify_request(
         Ok(rt) => rt,
         Err(err) => {
             println!("ERROR: Error while creating tokio runtime: {:?}", err);
-            return -1;
+            return -1000;
         }
     };
     let local = task::LocalSet::new();
@@ -77,7 +77,7 @@ pub extern "C" fn new_identity_verify_request(
             let hello_response: HelloResponse = serde_json::from_str(body_str)?;
             return Ok(hello_response.greeting);
         } else {
-            return Err(into_err(format!("ERROR: HTTP request ened with stats '{:?}'", status)));
+            return Err(into_err(format!("ERROR: Bad HTTP status '{:?}'", status)));
         }
     }) {
         Ok(reference) => {
