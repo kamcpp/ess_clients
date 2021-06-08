@@ -1,5 +1,5 @@
 [package]
-name = "simurgh-admin"
+name = "ess-admin"
 version = "0.1.0"
 authors = ["Kamran Amini <kam.cpp@gmail.com>"]
 edition = "2018"
