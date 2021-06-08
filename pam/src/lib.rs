@@ -93,7 +93,7 @@ pub extern "C" fn ess_verify(
         }
         Err(err) => {
             println!("{}", err);
-            return -3000;
+            return -1;
         }
     }
 }
