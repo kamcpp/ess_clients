@@ -33,7 +33,7 @@ fn create_client(identity_file_path: &str) -> Client<TimeoutConnector<HttpsConne
     let mut identity_file = File::open(identity_file_path).unwrap();
     let mut identity_data = vec![];
     identity_file.read_to_end(&mut identity_data).unwrap();
-    let identity = Identity::from_pkcs12(&identity_data, "manning").unwrap();
+    let identity = Identity::from_pkcs12(&identity_data, "").unwrap();
 
     // Create TLS connector
     let tls_connector = TlsConnector::builder()
