@@ -18,20 +18,6 @@ use tokio::task;
 extern crate serde_derive;
 
 #[derive(Debug, Serialize)]
-pub struct NewIdentityVerifyRequestModel {
-    pub username: String,
-    #[serde(rename = "clientUtcDateTime")]
-    pub client_utc_dt: i64,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct NewIdentityVerifyResponseModel {
-    pub reference: String,
-    #[serde(rename = "serverUtcDateTime")]
-    pub server_utc_dt: i64,
-}
-
-#[derive(Debug, Serialize)]
 pub struct VerifyRequestModel {
     pub username: String,
     #[serde(rename = "totpCode")]
