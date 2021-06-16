@@ -5,3 +5,7 @@ install-deps:
 .PHONY: build
 build:
 	cargo build
+
+.PHONY: install
+install:
+	sudo cp target/debug/libess_pam.so /usr/lib
