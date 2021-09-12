@@ -33,7 +33,7 @@ fn create_client(identity_file_path: &str) -> Client<TimeoutConnector<HttpsConne
     let mut identity_file = File::open(identity_file_path).unwrap();
     let mut identity_data = vec![];
     identity_file.read_to_end(&mut identity_data).unwrap();
-    let identity = Identity::from_pkcs12(&identity_data, "").unwrap();
+    let identity = Identity::from_pkcs12(&identity_data, "password").unwrap();
 
     // Create TLS connector
     let tls_connector = TlsConnector::builder()
@@ -68,7 +68,7 @@ fn main() -> Result<(), Error> {
                 .required(true),
             Arg::with_name("ess-addr")
                 .long("ess-addr")
-                .help("The address of ESS backend e.g. admin.ess.encryptizer.com:8080")
+                .help("The address of ESS backend e.g. localhost:30444")
                 .takes_value(true)
                 .required(true),
         ])
@@ -229,11 +229,11 @@ fn main() -> Result<(), Error> {
             Ok(resp) => {
                 let status = resp.status();
                 if resp.status() == StatusCode::OK {
-                    if response_has_entites {
-                        match hyper::body::to_bytes(resp).await {
-                            Ok(bytes) => {
-                                match std::str::from_utf8(bytes.as_ref()) {
-                                    Ok(body_str) => {
+                    match hyper::body::to_bytes(resp).await {
+                        Ok(bytes) => {
+                            match std::str::from_utf8(bytes.as_ref()) {
+                                Ok(body_str) => {
+                                    if response_has_entites {
                                         let employees: Result<Vec<Employee>, _> = serde_json::from_str(body_str);
                                         match employees {
                                             Ok(employees) => {
@@ -241,12 +241,14 @@ fn main() -> Result<(), Error> {
                                             },
                                             Err(err) => panic!("ERROR: Error while deserializing the response: {}", err),
                                         }
-                                    },
-                                    Err(err) => println!("ERROR: Error while converting body to utf8 string: {:?}", err),
-                                }
-                            },
-                            Err(err) => println!("ERROR: Error while reading body: {:?}", err),
-                        }
+                                    } else {
+                                        println!("{}", body_str);
+                                    }
+                                },
+                                Err(err) => println!("ERROR: Error while converting body to utf8 string: {:?}", err),
+                            }
+                        },
+                        Err(err) => println!("ERROR: Error while reading body: {:?}", err),
                     }
                 } else {
                     match hyper::body::to_bytes(resp).await {
