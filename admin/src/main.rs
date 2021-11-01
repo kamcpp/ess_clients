@@ -4,14 +4,7 @@ use std::result::Result;
 
 use clap::{App, AppSettings, Arg};
 
-use native_tls::{Identity, TlsConnector};
-
-use hyper::{Client, Request, StatusCode, Body};
-use hyper::client::HttpConnector;
-
-use hyper_timeout::TimeoutConnector;
-
-use hyper_tls::HttpsConnector;
+>> ADD DEPENDENCIES HERE <<
 
 use tokio::task;
 
@@ -20,37 +13,11 @@ extern crate serde_derive;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Employee {
-    pub username: Option<String>,
-    #[serde(rename = "firstName")]
-    pub first_name: Option<String>,
-    #[serde(rename = "secondName")]
-    pub second_name: Option<String>,
+    >> FILL HERE <<
 }
 
 fn create_client(identity_file_path: &str) -> Client<TimeoutConnector<HttpsConnector<HttpConnector>>> {
-
-    // Create identity object
-    let mut identity_file = File::open(identity_file_path).unwrap();
-    let mut identity_data = vec![];
-    identity_file.read_to_end(&mut identity_data).unwrap();
-    let identity = Identity::from_pkcs12(&identity_data, "password").unwrap();
-
-    // Create TLS connector
-    let tls_connector = TlsConnector::builder()
-        .identity(identity)
-        .danger_accept_invalid_certs(true)
-        .build().unwrap();
-
-    // Create HTTPS connector
-    let mut http_connector = HttpConnector::new();
-    http_connector.enforce_http(false);
-    let https_connector = HttpsConnector::from((http_connector, tls_connector.into()));
-
-    // Create timeout connector
-    let mut timeout_connector = TimeoutConnector::new(https_connector);
-    timeout_connector.set_connect_timeout(Some(std::time::Duration::from_secs(5)));
-
-    Client::builder().build(timeout_connector)
+    >> FILL HERE <<
 }
 
 fn main() -> Result<(), Error> {
@@ -158,116 +125,7 @@ fn main() -> Result<(), Error> {
         )
         .get_matches();
 
-    let mut rt = tokio::runtime::Runtime::new()?;
-    let local = task::LocalSet::new();
-    local.block_on(&mut rt, async move {
+    >> FILL HERE <<
 
-        let ess_addr = matches.value_of("ess-addr").unwrap();
-        let client = create_client(matches.value_of("pkcs12-cert").unwrap());
-
-        let req;
-        let mut response_has_entites = false;
-        match matches.subcommand() {
-            ("add", Some(matches)) => {
-                match matches.subcommand() {
-                    ("employee", Some(matches)) => {
-                        let employee = Employee {
-                            username: matches.value_of("username").map(|s| s.to_string()),
-                            first_name: matches.value_of("first-name").map(|s| s.to_string()),
-                            second_name: matches.value_of("second-name").map(|s| s.to_string()),
-                        };
-                        req = Request::post(format!("https://{}/api/admin/employee", ess_addr))
-                                    .header("Content-Type", "application/json")
-                                    .body(Body::from(serde_json::to_string(&employee).unwrap())).unwrap();
-                    },
-                    (entity, _) => panic!("ERROR: Entity is not supported for 'add': {}", entity),
-                }
-            },
-            ("update", Some(matches)) => {
-                match matches.subcommand() {
-                    ("employee", Some(matches)) => {
-                        let username = matches.value_of("username").map(|s| s.to_string());
-                        let employee = Employee {
-                            username: username.clone(),
-                            first_name: matches.value_of("first-name").map(|s| s.to_string()),
-                            second_name: matches.value_of("second-name").map(|s| s.to_string()),
-                        };
-                        req = Request::put(format!("https://{}/api/admin/employee/{}", ess_addr, username.unwrap()))
-                                    .header("Content-Type", "application/json")
-                                    .body(Body::from(serde_json::to_string(&employee).unwrap())).unwrap();
-                    },
-                    (entity, _) => panic!("ERROR: Entity is not supported for 'update': {}", entity),
-                }
-            },
-            ("delete", Some(matches)) => {
-                match matches.subcommand() {
-                    ("employee", Some(matches)) => {
-                        let username = matches.value_of("username").map(|s| s.to_string());
-                        req = Request::delete(format!("https://{}/api/admin/employee/{}", ess_addr, username.unwrap()))
-                                    .body(Body::from("")).unwrap();
-                    },
-                    (entity, _) => panic!("ERROR: Entity is not supported for 'delete': {}", entity),
-                }
-            },
-            ("list", Some(matches)) => {
-                match matches.subcommand() {
-                    ("employee", Some(matches)) => {
-                        let mut uri = format!("https://{}/api/admin/employee", ess_addr);
-                        uri = match matches.value_of("username") {
-                            Some(username) => format!("{}/{}", uri, username),
-                            None => format!("{}/all", uri),
-                        };
-                        response_has_entites = true;
-                        req = Request::get(uri).body(Body::from("")).unwrap();
-                    },
-                    (entity, _) => panic!("ERROR: Entity is not supported for 'list': {}", entity),
-                }
-            },
-            (subcommand, _)  => panic!("ERROR: Subcommand is not supported: {}", subcommand),
-        }
-        match client.request(req).await {
-            Ok(resp) => {
-                let status = resp.status();
-                if resp.status() == StatusCode::OK {
-                    match hyper::body::to_bytes(resp).await {
-                        Ok(bytes) => {
-                            match std::str::from_utf8(bytes.as_ref()) {
-                                Ok(body_str) => {
-                                    if response_has_entites {
-                                        let employees: Result<Vec<Employee>, _> = serde_json::from_str(body_str);
-                                        match employees {
-                                            Ok(employees) => {
-                                                employees.iter().for_each(|employee| println!("{:?}", employee));
-                                            },
-                                            Err(err) => panic!("ERROR: Error while deserializing the response: {}", err),
-                                        }
-                                    } else {
-                                        println!("{}", body_str);
-                                    }
-                                },
-                                Err(err) => println!("ERROR: Error while converting body to utf8 string: {:?}", err),
-                            }
-                        },
-                        Err(err) => println!("ERROR: Error while reading body: {:?}", err),
-                    }
-                } else {
-                    match hyper::body::to_bytes(resp).await {
-                        Ok(bytes) => {
-                            match std::str::from_utf8(bytes.as_ref()) {
-                                Ok(body_str) => {
-                                    println!("ERROR: [{}] {}", status, body_str);
-                                },
-                                Err(err) => println!("ERROR: Error while converting body to utf8 string: {:?}", err),
-                            }
-                        },
-                        Err(err) => println!("ERROR: Error while reading body: {:?}", err),
-                    }
-                }
-            },
-            Err(err) => {
-                println!("ERROR: {}", err);
-            }
-        }
-    });
     Ok(())
 }
